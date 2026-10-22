@@ -22,18 +22,18 @@ jobs:
           from pathlib import Path
 
           path = Path("all_unicode_codepoints.txt")
-          with path.open("w", encoding="utf-8", newline="\\n") as f:
-              f.write("UNICODE CODE POINTS — REFERENCE LIST\\n")
-              f.write("====================================\\n\\n")
-              f.write("Lists every code point from U+0000 through U+10FFFF.\\n")
-              f.write("Some entries are controls, combining marks, unassigned code points, or have no visible glyph.\\n")
-              f.write("Names reflect the Unicode database included with the Python runtime.\\n")
-              f.write("Rendering depends on the font, operating system, and app.\\n\\n")
+          with path.open("w", encoding="utf-8", newline="") as f:
+              f.write("UNICODE CODE POINTS — REFERENCE LIST\n")
+              f.write("====================================\n\n")
+              f.write("Lists every code point from U+0000 through U+10FFFF.\n")
+              f.write("Some entries are controls, combining marks, unassigned code points, or have no visible glyph.\n")
+              f.write("Names reflect the Unicode database included with the Python runtime.\n")
+              f.write("Rendering depends on the font, operating system, and app.\n\n")
               for cp in range(0x110000):
                   ch = chr(cp)
                   name = unicodedata.name(ch, "<no Unicode name assigned>")
                   visible = ch if cp >= 0x20 and not (0xD800 <= cp <= 0xDFFF) and cp not in (0x7F, 0x2028, 0x2029) else "[not printed]"
-                  f.write(f"U+{cp:04X}\\t{name}\\t{visible}\\n")
+                  f.write(f"U+{cp:04X}\t{name}\t{visible}\n")
           print(f"Generated {path} ({path.stat().st_size:,} bytes)")
           PY
       - name: Publish direct-download release asset
