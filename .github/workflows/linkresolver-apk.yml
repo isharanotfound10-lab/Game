@@ -36,8 +36,6 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          build-root-directory: linkresolver-source
 
       - name: Build debug APK
         working-directory: linkresolver-source
@@ -45,17 +43,18 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon assembleDebug
 
-      - name: Run unit tests
-        working-directory: linkresolver-source
-        run: ./gradlew --no-daemon testDebugUnitTest
-
       - name: Upload installable APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: LinkResolver-debug-APK
           path: linkresolver-source/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 14
+
+      - name: Run unit tests
+        working-directory: linkresolver-source
+        run: ./gradlew --no-daemon testDebugUnitTest
 
       - name: Upload test reports if tests fail
         if: failure()
