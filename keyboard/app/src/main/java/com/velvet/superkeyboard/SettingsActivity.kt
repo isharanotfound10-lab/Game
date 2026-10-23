@@ -46,10 +46,6 @@ class SettingsActivity : Activity() {
         addSwitch(root,"Double-space inserts a period","double_space_period",true)
         addSwitch(root,"Key haptic feedback","key_haptics",false)
         root.addView(actionButton("✍  Set email signature") { editSignature() },LinearLayout.LayoutParams(-1,50))
-        root.addView(actionButton("🧹  Clear saved clipboard history") {
-            prefs.edit().remove("clipboard_history_json").apply()
-            Toast.makeText(this,"Saved clipboard history cleared",Toast.LENGTH_SHORT).show()
-        },LinearLayout.LayoutParams(-1,50))
         root.addView(actionButton("🧠  Reset learned words") {
             AlertDialog.Builder(this).setTitle("Reset learned words?")
                 .setMessage("This removes the keyboard's locally learned word list.")
