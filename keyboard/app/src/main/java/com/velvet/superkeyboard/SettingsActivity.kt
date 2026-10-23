@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Switch
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 
@@ -47,7 +48,7 @@ class SettingsActivity : Activity() {
             (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker()
         },LinearLayout.LayoutParams(-1,54))
         root.addView(TextView(this).apply {
-            text = "\nFEATURES IN THIS BUILD\n• Native QWERTY typing, shift, delete, enter and system keyboard switching\n• Optional number row, symbols and Unicode symbol panel\n• Offline word suggestions, common-typo correction and basic glide typing\n• Emoji picker, clipboard paste and external Tenor GIF search\n• Text tools: case conversion, reverse, whitespace cleanup, typo fixes, date/time and saved signature\n• Five themes, smooth-effects toggle, auto-correct and optional haptics\n\nPRIVACY\nPredictions run locally. Suggestions and correction are disabled in detected password fields. GIF search opens your browser and sends the search query to Tenor. This keyboard does not upload typed text.\n\nLIMITATIONS\nThis build does not yet include a neural AI model, a neural on-device AI model, advanced personalized swipe prediction, GIF insertion directly into apps, cloud sync, full multilingual dictionaries, or a visual custom-keyboard designer."
+            text = "\nFEATURES IN THIS BUILD\n• Native QWERTY typing, shift, delete, enter and system keyboard switching\n• Optional number row, symbols, Unicode panel, QWERTY/Dvorak/Colemak layouts and three key sizes\n• Offline word suggestions, common-typo correction and basic glide typing\n• Emoji picker, clipboard paste and external Tenor GIF search\n• Text tools: case conversion, reverse, whitespace cleanup, typo fixes, date/time and saved signature\n• Five themes, smooth-effects toggle, auto-correct and optional haptics\n\nPRIVACY\nPredictions run locally. Suggestions and correction are disabled in detected password fields. GIF search opens your browser and sends the search query to Tenor. This keyboard does not upload typed text.\n\nLIMITATIONS\nThis build does not yet include a neural on-device AI model, advanced personalized swipe prediction, GIF insertion directly into apps, cloud sync, full multilingual dictionaries, or a visual custom-keyboard designer."
             textSize = 14f; setTextColor(Color.rgb(190,177,210)); setPadding(4,16,4,16)
         })
         setContentView(root)
