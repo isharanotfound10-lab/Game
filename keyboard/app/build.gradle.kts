@@ -9,8 +9,8 @@ android {
         applicationId = "com.velvet.superkeyboard"
         minSdk = 23
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {
@@ -19,4 +19,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { buildConfig = true }
+}
+dependencies {
+    testImplementation("junit:junit:4.13.2")
 }
