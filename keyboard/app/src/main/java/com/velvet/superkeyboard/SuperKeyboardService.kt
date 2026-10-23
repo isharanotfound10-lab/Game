@@ -439,6 +439,11 @@ class SuperKeyboardService : InputMethodService() {
         AlertDialog.Builder(this).setTitle("Recent clipboard (saved on device)")
             .setItems(recentClipboard.map { it.replace("\n", " ").take(70) }.toTypedArray()) { _, index ->
                 currentInputConnection?.commitText(recentClipboard[index], 1)
+            }
+            .setNeutralButton("Clear history") { _, _ ->
+                recentClipboard.clear()
+                prefs.edit().remove("clipboard_history_json").apply()
+                Toast.makeText(this, "Clipboard history cleared", Toast.LENGTH_SHORT).show()
             }.show()
     }
 
