@@ -1,24 +1,27 @@
 # Super Keyboard for Android
 
-Standalone native Android keyboard project stored in the `keyboard/` folder of the Game repository. It does not replace or modify the Unity game project.
+Standalone native Android input method under `keyboard/` in the Game repository. It is separate from the Unity game.
 
-## Current MVP
-- Native Android Input Method Service
-- Purple dark/glass-inspired keys
-- QWERTY and basic symbol layouts
-- Shift, delete, space, enter, language picker
-- Clipboard paste button and quick emoji insertion
-- Android settings links to enable and select the keyboard
-- GitHub Actions build and debug APK artifact
+## Features implemented in this build
+- Native Android IME with QWERTY typing, shift, backspace, space, enter/action-key handling and Android keyboard switcher.
+- Optional number row; number/symbol layout; Unicode symbol panel.
+- Small offline word-suggestion and common-typo correction engine. It runs locally and is suppressed for detected password fields.
+- Emoji picker with multiple categories.
+- Clipboard paste.
+- GIF search shortcut that opens Tenor in the browser; GIFs are not inserted directly into the current app.
+- Text utilities for uppercase/lowercase/title case/reverse/whitespace cleanup/common typo fixes, plus date/time and a saved signature.
+- Five themes (Purple, Cyber Pink, Ocean, Emerald, AMOLED), effects toggle, auto-correct toggle, number-row toggle, optional haptics setting, and signature settings.
+- GitHub Actions build and unit tests.
 
 ## Build
-From this directory, with JDK 17 and Gradle 8.9 installed:
+With JDK 17 and Gradle 8.9:
 
 ```sh
-gradle assembleDebug
+gradle -p keyboard assembleDebug
+gradle -p keyboard testDebugUnitTest
 ```
 
-APK output: `app/build/outputs/apk/debug/app-debug.apk`
+APK output: `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Important
-Android requires the user to enable and select a third-party keyboard in system settings. This project does not secretly capture keystrokes or transmit typed text. AI, advanced prediction, theme editor, and custom layouts are not implemented yet.
+## Privacy and limitations
+The keyboard does not upload typed text. Suggestions use a small bundled local word list, not a neural model or a large language model. This build does **not** yet include true glide/swipe typing, an on-device AI model, personalized learned dictionary, full multilingual dictionaries, direct in-app GIF insertion, clipboard history, cloud sync, or a visual custom-layout editor. GIF search opens an external website and sends the search query to that website. Android requires the user to enable and select third-party keyboards in system settings.
