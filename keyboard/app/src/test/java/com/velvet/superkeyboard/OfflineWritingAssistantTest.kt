@@ -5,7 +5,7 @@ import org.junit.Test
 
 class OfflineWritingAssistantTest {
     @Test fun grammarHelperFixesCommonTyposAndPunctuation() {
-        assertEquals("I recieved the file.", OfflineWritingAssistant.improve("i recieved the file", "Fix grammar"))
+        assertEquals("I hello you.", OfflineWritingAssistant.improve("i helo you", "Fix grammar"))
     }
 
     @Test fun conciseHelperRemovesCommonFillerWords() {
