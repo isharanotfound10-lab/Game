@@ -1,0 +1,37 @@
+name: Telegram Video Bot CI
+
+on:
+  push:
+    paths:
+      - "telegram-video-bot/**"
+  pull_request:
+    paths:
+      - "telegram-video-bot/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telegram-video-bot
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: telegram-video-bot/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Compile Python
+        run: python -m compileall -q .
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
