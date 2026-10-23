@@ -170,7 +170,8 @@ class SuperKeyboardService : InputMethodService() {
                     true
                 }
                 val heightExtra = when (prefs.getString("key_size", "Normal")) { "Compact" -> -5; "Tall" -> 6; else -> 0 }
-                val lp = LinearLayout.LayoutParams(0, dp((if (key == "SPACE" || key == "↵") 47 else 43) + heightExtra), if (key == "SPACE") 4.1f else 1f)
+                val customWidth = prefs.getFloat("key_width_$key", 1f).coerceIn(0.5f, 2f)
+                val lp = LinearLayout.LayoutParams(0, dp((if (key == "SPACE" || key == "↵") 47 else 43) + heightExtra), (if (key == "SPACE") 4.1f else 1f) * customWidth)
                 lp.setMargins(dp(2),dp(3),dp(2),dp(3)); line.addView(button,lp)
             }
             val heightExtra = when (prefs.getString("key_size", "Normal")) { "Compact" -> -5; "Tall" -> 6; else -> 0 }
@@ -483,9 +484,10 @@ class SuperKeyboardService : InputMethodService() {
     private fun key(label: String, special: Boolean) = Button(this).apply {
         text = label; textSize = if (label.length > 3) 10.5f else 18f; isAllCaps = false
         setTextColor(Color.WHITE); typeface = Typeface.create("sans-serif-medium",Typeface.NORMAL)
+        val customColor = try { Color.parseColor(prefs.getString("key_color_$label", "") ?: "") } catch (_: Exception) { if (special) Color.rgb(74,37,105) else keyColor }
         background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
-            intArrayOf(lighten(if (special) Color.rgb(74,37,105) else keyColor), if (special) Color.rgb(74,37,105) else keyColor)
+            intArrayOf(lighten(customColor), customColor)
         ).apply {
             val radius = prefs.getInt("custom_key_radius", 12).coerceIn(4, 28)
             cornerRadius = dp(radius).toFloat()
