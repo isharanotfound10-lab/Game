@@ -30,17 +30,26 @@ object OfflinePredictionEngine {
         "the" to listOf("best","first","keyboard","new","same","way")
     )
 
-    fun suggestions(prefix: String, previousWord: String = ""): List<String> {
+    private val languageWords = mapOf(
+        "Sinhala" to listOf("අද","අපි","ඔබ","ඔයා","කොහොමද","හොඳයි","ස්තුතියි","මට","මම","නැහැ","ඔව්","කරන්න","යන්න","එන්න","ගෙදර","කෑම","වතුර","දවස","ලස්සන","ආයුබෝවන්"),
+        "Tamil" to listOf("வணக்கம்","நன்றி","நான்","நீங்கள்","நீ","ஆம்","இல்லை","நல்ல","எப்படி","இன்று","நாளை","வீடு","தண்ணீர்","சாப்பாடு","வேண்டும்","வாருங்கள்","போங்கள்","அன்பு","நண்பர்","சரி")
+    )
+
+    fun wordsForLanguage(language: String): List<String> =
+        if (language == "English") words else languageWords[language].orEmpty()
+
+    fun suggestions(prefix: String, previousWord: String = "", language: String = "English"): List<String> {
         val clean = prefix.lowercase().trim()
         if (clean.isEmpty()) {
             return nextWords[previousWord.lowercase()].orEmpty().take(3)
         }
-        val matches = words.asSequence()
+        val dictionary = wordsForLanguage(language)
+        val matches = dictionary.asSequence()
             .filter { it.startsWith(clean) && it != clean }
             .sortedWith(compareBy<String>({ it.length }, { it }))
             .take(3)
             .toList()
-        return if (matches.size < 3 && clean.length >= 2) {
+        return if (matches.size < 3 && clean.length >= 1) {
             (matches + listOf(clean)).distinct().take(3)
         } else matches
     }
