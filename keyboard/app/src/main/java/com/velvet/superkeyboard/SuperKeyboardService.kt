@@ -117,7 +117,7 @@ class SuperKeyboardService : InputMethodService() {
                     else -> key
                 }
                 val special = index == rows.lastIndex || key in listOf("⇧","⌫","?123","ABC","↵")
-                val button = key(label, special)
+                val button = key(label, special, key)
                 button.tag = key
                 if (!symbols && !unicode && key.length == 1 && key[0].isLetter()) {
                     button.setOnTouchListener { _, event ->
@@ -481,10 +481,10 @@ class SuperKeyboardService : InputMethodService() {
             }.show()
     }
 
-    private fun key(label: String, special: Boolean) = Button(this).apply {
+    private fun key(label: String, special: Boolean, styleKey: String = label) = Button(this).apply {
         text = label; textSize = if (label.length > 3) 10.5f else 18f; isAllCaps = false
         setTextColor(Color.WHITE); typeface = Typeface.create("sans-serif-medium",Typeface.NORMAL)
-        val customColor = try { Color.parseColor(prefs.getString("key_color_$label", "") ?: "") } catch (_: Exception) { if (special) Color.rgb(74,37,105) else keyColor }
+        val customColor = try { Color.parseColor(prefs.getString("key_color_$styleKey", "") ?: "") } catch (_: Exception) { if (special) Color.rgb(74,37,105) else keyColor }
         background = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(lighten(customColor), customColor)
