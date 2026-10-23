@@ -26,22 +26,22 @@ class SettingsActivity : Activity() {
     private fun render() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(24,24,24,24); setBackgroundColor(Color.rgb(7,5,17))
+            setPadding(dp(18),dp(16),dp(18),dp(24)); setBackgroundColor(Color.rgb(7,5,17))
         }
         root.addView(TextView(this).apply {
             text = "SUPER KEYBOARD"; textSize = 25f; typeface = Typeface.create("sans-serif",Typeface.BOLD)
             setTextColor(purple); gravity = Gravity.CENTER
-        },LinearLayout.LayoutParams(-1,64))
+        },LinearLayout.LayoutParams(-1,dp(64)))
         root.addView(TextView(this).apply {
             text = "Personalize your keyboard"; textSize = 16f; setTextColor(Color.WHITE); gravity = Gravity.CENTER
-        },LinearLayout.LayoutParams(-1,36))
-        root.addView(actionButton("🎨  Theme: ${prefs.getString("theme","Purple")}") { chooseTheme() },LinearLayout.LayoutParams(-1,54))
-        root.addView(actionButton("⌨  Layout: ${prefs.getString("layout","QWERTY")}") { chooseLayout() },LinearLayout.LayoutParams(-1,50))
-        root.addView(actionButton("↕  Key size: ${prefs.getString("key_size","Normal")}") { chooseKeySize() },LinearLayout.LayoutParams(-1,50))
-        root.addView(actionButton("🧩  Keyboard appearance / key shape") { chooseKeyAppearance() },LinearLayout.LayoutParams(-1,50))
-        root.addView(actionButton("🌐  Typing language: ${prefs.getString("dictionary_language","English")}") { chooseDictionaryLanguage() },LinearLayout.LayoutParams(-1,50))
-        root.addView(actionButton("🛠  Custom keyboard rows") { editCustomLayout() },LinearLayout.LayoutParams(-1,50))
-        root.addView(actionButton("🎨  Customize individual key") { customizeIndividualKey() },LinearLayout.LayoutParams(-1,50))
+        },LinearLayout.LayoutParams(-1,dp(36)))
+        root.addView(actionButton("🎨  Theme: ${prefs.getString("theme","Purple")}") { chooseTheme() },buttonParams(54))
+        root.addView(actionButton("⌨  Layout: ${prefs.getString("layout","QWERTY")}") { chooseLayout() },buttonParams(50))
+        root.addView(actionButton("↕  Key size: ${prefs.getString("key_size","Normal")}") { chooseKeySize() },buttonParams(50))
+        root.addView(actionButton("🧩  Keyboard appearance / key shape") { chooseKeyAppearance() },buttonParams(50))
+        root.addView(actionButton("🌐  Typing language: ${prefs.getString("dictionary_language","English")}") { chooseDictionaryLanguage() },buttonParams(50))
+        root.addView(actionButton("🛠  Custom keyboard rows") { editCustomLayout() },buttonParams(50))
+        root.addView(actionButton("🎨  Customize individual key") { customizeIndividualKey() },buttonParams(50))
         addSwitch(root,"Smooth animations / effects","animations",true)
         addSwitch(root,"Show number row","number_row",true)
         addSwitch(root,"Auto-correct common typos","auto_correct",true)
@@ -49,7 +49,7 @@ class SettingsActivity : Activity() {
         addSwitch(root,"Automatic sentence capitalization","auto_capitalize",true)
         addSwitch(root,"Double-space inserts a period","double_space_period",true)
         addSwitch(root,"Key haptic feedback","key_haptics",false)
-        root.addView(actionButton("✍  Set email signature") { editSignature() },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("✍  Set email signature") { editSignature() },buttonParams(50))
         root.addView(actionButton("🧠  Reset learned words") {
             AlertDialog.Builder(this).setTitle("Reset learned words?")
                 .setMessage("This removes the keyboard's locally learned word list.")
@@ -57,17 +57,17 @@ class SettingsActivity : Activity() {
                     prefs.edit().remove("learned_words").apply()
                     Toast.makeText(this,"Learned words cleared",Toast.LENGTH_SHORT).show()
                 }.show()
-        },LinearLayout.LayoutParams(-1,50))
-        root.addView(actionButton("1  Enable Super Keyboard") { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) },LinearLayout.LayoutParams(-1,54))
+        },buttonParams(50))
+        root.addView(actionButton("1  Enable Super Keyboard") { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) },buttonParams(54))
         root.addView(actionButton("2  Choose Super Keyboard") {
             (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker()
-        },LinearLayout.LayoutParams(-1,54))
+        },buttonParams(54))
         root.addView(TextView(this).apply {
             text = """FEATURES IN THIS BUILD
 • Native QWERTY typing, shift, delete, enter and system keyboard switching\n• Optional number row, symbols, Unicode panel, QWERTY/Dvorak/Colemak layouts and three key sizes\n• Offline word suggestions, common-typo correction and basic glide typing\n• Emoji picker, clipboard paste and external Tenor GIF search\n• Text tools: case conversion, reverse, whitespace cleanup, typo fixes, date/time, saved snippets, persistent on-device clipboard history, saved signature, and offline writing helpers (grammar cleanup, concise, professional/friendly tone, slight expansion)
 • Horizontal glass-shine reflection on toolbar controls: 2100 ms travel, 1200 ms pause, 35% intensity; follows the smooth-effects toggle
 • Optional local personalization learns up to 2000 words from non-password text\n• Five themes, smooth-effects toggle, auto-correct, auto-capitalization, double-space punctuation and optional haptics\n\nPRIVACY\nPredictions run locally. Suggestions and correction are disabled in detected password fields. GIF search opens your browser and sends the search query to Tenor. This keyboard does not upload typed text.\n\nLIMITATIONS\nThis build does not yet include a neural on-device AI model, advanced neural swipe prediction, GIF insertion directly into apps, cloud sync, full downloadable multilingual dictionaries, or a drag-and-drop visual keyboard designer. Writing helpers use lightweight rules, not a generative AI model. Key shape customization changes corner radius; per-key color/size editing is not included. Local word learning is lightweight dictionary personalization. Clipboard history is stored on this device; use the clear-history button on shared devices."""
-            textSize = 14f; setTextColor(Color.rgb(190,177,210)); setPadding(4,16,4,16)
+            textSize = 14f; setTextColor(Color.rgb(190,177,210)); setPadding(dp(4),dp(16),dp(4),dp(16))
         })
         val scroll = ScrollView(this)
         scroll.addView(root)
@@ -82,7 +82,7 @@ class SettingsActivity : Activity() {
                 prefs.edit().putBoolean(key,checked).apply()
                 Toast.makeText(this@SettingsActivity,if(checked) "Enabled" else "Disabled",Toast.LENGTH_SHORT).show()
             }
-        },LinearLayout.LayoutParams(-1,50))
+        },buttonParams(50))
     }
 
     private fun chooseLayout() {
@@ -130,7 +130,7 @@ class SettingsActivity : Activity() {
 
     private fun editCustomLayout() {
         val defaultRows = when (prefs.getString("dictionary_language", "English")) {
-            "Sinhala" -> "අආඇඉඊඋඑඔකග\nචජටඩතදනපබ\nමයരලවසහළෆ"
+            "Sinhala" -> "අආඇඉඊඋඑඔකග\nචජටඩතදනපබ\nමයරලවසහළෆ"
             "Tamil" -> "அஆஇஈஉஊஎஏகங\nசஞடணதநபமய\nரலவழளறனஜஹ"
             else -> "qwertyuiop\nasdfghjkl\nzxcvbnm"
         }
@@ -224,6 +224,30 @@ class SettingsActivity : Activity() {
     }
 
     private fun actionButton(label: String, action: () -> Unit) = Button(this).apply {
-        text = label; isAllCaps = false; setOnClickListener { action() }
+        text = label
+        isAllCaps = false
+        textSize = 14f
+        gravity = Gravity.CENTER
+        setTextColor(Color.WHITE)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        minHeight = dp(48); minimumHeight = dp(48)
+        minimumWidth = 0; minWidth = 0
+        setPadding(dp(12), dp(8), dp(12), dp(8))
+        background = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            intArrayOf(Color.rgb(62,38,91), Color.rgb(27,17,43))
+        ).apply {
+            cornerRadius = dp(14).toFloat()
+            setStroke(dp(1), Color.argb(130, 160, 80, 255))
+        }
+        stateListAnimator = null
+        setOnClickListener { action() }
     }
+
+    private fun buttonParams(heightDp: Int): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(-1, dp(heightDp)).apply {
+            setMargins(0, dp(3), 0, dp(3))
+        }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
