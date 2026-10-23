@@ -52,8 +52,8 @@ def ydl_options() -> dict:
         "skip_download": True,
         "socket_timeout": 25,
         "retries": 2,
-        # curl-cffi (requirements.txt) lets yt-dlp use a browser-like TLS fingerprint.
-        "impersonate": "chrome",
+        # Leave impersonation unset: current yt-dlp Python API expects an
+        # ImpersonateTarget object, not the CLI-style string "chrome".
     }
 
 
@@ -176,7 +176,6 @@ def _download_format(url: str, format_id: str, output_dir: str) -> str:
         "noplaylist": True,
         "socket_timeout": 30,
         "retries": 2,
-        "impersonate": "chrome",
         "format": format_id,
         "outtmpl": str(Path(output_dir) / "video.%(ext)s"),
         "max_filesize": MAX_UPLOAD_BYTES,
