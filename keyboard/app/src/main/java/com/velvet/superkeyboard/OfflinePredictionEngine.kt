@@ -45,6 +45,35 @@ object OfflinePredictionEngine {
         } else matches
     }
 
+    /** Chooses a close dictionary word for a swipe trace using edit distance. */
+    fun swipeCandidate(trace: String): String {
+        val clean = trace.lowercase().filter { it.isLetter() }
+        if (clean.length < 3) return ""
+        return words.asSequence()
+            .filter { kotlin.math.abs(it.length - clean.length) <= 3 }
+            .map { it to editDistance(clean, it) }
+            .filter { it.second <= maxOf(1, clean.length / 3) }
+            .sortedWith(compareBy<Pair<String, Int>>({ it.second }, { kotlin.math.abs(it.first.length - clean.length) }, { it.first.length }))
+            .firstOrNull()?.first ?: ""
+    }
+
+    private fun editDistance(a: String, b: String): Int {
+        var previous = IntArray(b.length + 1) { it }
+        for (i in a.indices) {
+            val current = IntArray(b.length + 1)
+            current[0] = i + 1
+            for (j in b.indices) {
+                current[j + 1] = minOf(
+                    current[j] + 1,
+                    previous[j + 1] + 1,
+                    previous[j] + if (a[i] == b[j]) 0 else 1
+                )
+            }
+            previous = current
+        }
+        return previous[b.length]
+    }
+
     fun correct(word: String): String {
         val lower = word.lowercase()
         val common = mapOf("teh" to "the", "adn" to "and", "taht" to "that", "thier" to "their", "recieve" to "receive", "becuase" to "because", "dont" to "don't", "cant" to "can't", "wont" to "won't")
