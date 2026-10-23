@@ -1,11 +1,14 @@
 import asyncio
 import logging
 import os
+import tempfile
+from pathlib import Path
 from urllib.parse import urlparse
 
 import yt_dlp
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatAction
+from telegram.error import TelegramError
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -24,7 +27,8 @@ log = logging.getLogger("video-link-bot")
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 MAX_FORMAT_BUTTONS = 8
-# Per-process state is intentionally temporary; no submitted URLs are persisted.
+# Telegram's hosted Bot API has a 50 MB upload limit; stay below it.
+MAX_UPLOAD_BYTES = 49 * 1024 * 1024
 PENDING: dict[tuple[int, str], dict] = {}
 
 
@@ -51,38 +55,24 @@ def ydl_options() -> dict:
     }
 
 
-def quality_label(fmt: dict) -> str:
-    height = fmt.get("height")
-    if height:
-        return f"{height}p"
-    label = fmt.get("format_note") or fmt.get("resolution")
-    if label and label != "unknown":
-        return str(label)[:24]
-    return str(fmt.get("format_id", "Format"))[:24]
-
-
 def list_download_formats(info: dict) -> list[dict]:
-    """Return unique, direct HTTP(S) video formats, preferring common heights."""
-    formats = info.get("formats") or []
+    """Return unique direct video formats, preferring formats with audio."""
     candidates = []
     seen = set()
-    for fmt in formats:
+    for fmt in info.get("formats") or []:
         direct_url = fmt.get("url")
         if not direct_url or urlparse(direct_url).scheme not in {"http", "https"}:
             continue
-        # Audio-only entries are not useful for this video-link bot.
         if fmt.get("vcodec") == "none":
             continue
         height = fmt.get("height") or 0
         if height <= 0:
             continue
         key = (height, fmt.get("ext"), fmt.get("vcodec"), fmt.get("acodec"))
-        if key in seen:
-            continue
-        seen.add(key)
-        candidates.append(fmt)
+        if key not in seen:
+            seen.add(key)
+            candidates.append(fmt)
 
-    # One useful option per height, preferring muxed audio/video and then larger bitrate.
     by_height = {}
     for fmt in candidates:
         height = fmt.get("height") or 0
@@ -90,12 +80,13 @@ def list_download_formats(info: dict) -> list[dict]:
             1 if fmt.get("acodec") not in (None, "none") else 0,
             fmt.get("tbr") or 0,
         )
-        if height not in by_height or score > (
-            1 if by_height[height].get("acodec") not in (None, "none") else 0,
-            by_height[height].get("tbr") or 0,
-        ):
+        old = by_height.get(height)
+        old_score = (
+            1 if old and old.get("acodec") not in (None, "none") else 0,
+            (old or {}).get("tbr") or 0,
+        )
+        if old is None or score > old_score:
             by_height[height] = fmt
-
     return sorted(by_height.values(), key=lambda item: item.get("height") or 0, reverse=True)
 
 
@@ -104,8 +95,7 @@ def format_button_rows(formats: list[dict]) -> list[list[InlineKeyboardButton]]:
     for index, fmt in enumerate(formats[:MAX_FORMAT_BUTTONS]):
         height = fmt.get("height") or "?"
         ext = fmt.get("ext") or "video"
-        label = f"{height}p · {ext}"
-        buttons.append(InlineKeyboardButton(label, callback_data=f"quality:{index}"))
+        buttons.append(InlineKeyboardButton(f"{height}p · {ext}", callback_data=f"quality:{index}"))
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
     rows.append([InlineKeyboardButton("Open original page", callback_data="original")])
     return rows
@@ -114,10 +104,10 @@ def format_button_rows(formats: list[dict]) -> list[list[InlineKeyboardButton]]:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         await update.message.reply_text(
-            "Send a public Pornhub video page URL. I'll show the available qualities "
-            "and return a direct stream URL when the extractor provides one.\n\n"
-            "Only use this for content you own or are authorized to download. "
-            "Direct stream URLs may expire or be restricted to the original session/IP."
+            "Send a public Pornhub video page URL. I'll show available qualities; "
+            "when you choose one, I'll download it and send the actual video file here.\n\n"
+            "Telegram's standard bot upload limit is about 50 MB, so larger files may not send. "
+            "Only use this for content you own or are authorized to download."
         )
 
 
@@ -141,8 +131,7 @@ async def receive_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     except Exception as exc:
         log.info("Video extraction failed (%s)", type(exc).__name__)
         await message.reply_text(
-            "I couldn't read the available formats for that page. It may be private, "
-            "unavailable, age/session restricted, or unsupported. Try the original page link."
+            "I couldn't read that page. It may be private, unavailable, session restricted, or unsupported."
         )
         return
 
@@ -151,13 +140,13 @@ async def receive_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     PENDING[key] = {"url": url, "title": title, "formats": formats[:MAX_FORMAT_BUTTONS]}
     if not formats:
         await message.reply_text(
-            f"{title}\n\nNo direct video formats were exposed. Open the original page: {url}",
+            f"{title}\n\nNo downloadable video formats were exposed. Original page: {url}",
             disable_web_page_preview=True,
         )
         return
 
     await message.reply_text(
-        f"{title}\n\nChoose a quality:",
+        f"{title}\n\nChoose a quality. I'll send the actual video file (up to about 49 MB):",
         reply_markup=InlineKeyboardMarkup(format_button_rows(formats)),
         disable_web_page_preview=True,
     )
@@ -166,6 +155,28 @@ async def receive_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 def _extract_info(url: str) -> dict:
     with yt_dlp.YoutubeDL(ydl_options()) as ydl:
         return ydl.extract_info(url, download=False)
+
+
+def _download_format(url: str, format_id: str, output_dir: str) -> str:
+    options = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "socket_timeout": 30,
+        "retries": 1,
+        "format": format_id,
+        "outtmpl": str(Path(output_dir) / "video.%(ext)s"),
+        "max_filesize": MAX_UPLOAD_BYTES,
+    }
+    with yt_dlp.YoutubeDL(options) as ydl:
+        ydl.download([url])
+    files = [p for p in Path(output_dir).glob("video.*") if p.is_file()]
+    if not files:
+        raise FileNotFoundError("The downloader did not produce a video file.")
+    path = max(files, key=lambda p: p.stat().st_size)
+    if path.stat().st_size > MAX_UPLOAD_BYTES:
+        raise ValueError("The video is larger than Telegram's upload limit.")
+    return str(path)
 
 
 async def choose_quality(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -181,32 +192,58 @@ async def choose_quality(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if query.data == "original":
-        await query.edit_message_text(
-            f"Original page:\n{data['url']}",
-            disable_web_page_preview=True,
-        )
+        await query.edit_message_text(f"Original page:\n{data['url']}", disable_web_page_preview=True)
         return
 
     try:
         index = int((query.data or "").split(":", 1)[1])
         fmt = data["formats"][index]
+        format_id = str(fmt["format_id"])
     except (ValueError, IndexError, KeyError):
         await query.edit_message_text("That quality is no longer available. Send the URL again.")
         return
 
-    direct_url = fmt.get("url")
-    if not direct_url:
-        await query.edit_message_text(f"Direct link unavailable. Original page:\n{data['url']}")
-        return
-
     height = fmt.get("height") or "unknown"
-    ext = fmt.get("ext") or "video"
-    await query.edit_message_text(
-        f"{data['title']}\nQuality: {height}p · {ext}\n\n"
-        f"Direct link (may expire or be IP/session restricted):\n{direct_url}\n\n"
-        f"Original page: {data['url']}",
-        disable_web_page_preview=True,
-    )
+    ext = str(fmt.get("ext") or "video").lower()
+    try:
+        await query.edit_message_text(
+            f"Downloading {height}p now… I'll send the video here when it's ready."
+        )
+        with tempfile.TemporaryDirectory(prefix="telegram-video-") as temp_dir:
+            path = await asyncio.to_thread(_download_format, data["url"], format_id, temp_dir)
+            with open(path, "rb") as video_file:
+                if ext == "mp4" or path.lower().endswith(".mp4"):
+                    await query.message.reply_video(
+                        video=video_file,
+                        caption=f"{data['title']} · {height}p"[:1024],
+                        read_timeout=180,
+                        write_timeout=180,
+                        connect_timeout=30,
+                        pool_timeout=30,
+                    )
+                else:
+                    await query.message.reply_document(
+                        document=video_file,
+                        filename=Path(path).name,
+                        caption=f"{data['title']} · {height}p"[:1024],
+                        read_timeout=180,
+                        write_timeout=180,
+                        connect_timeout=30,
+                        pool_timeout=30,
+                    )
+        await query.message.reply_text("✅ Video file sent.")
+    except ValueError:
+        await query.message.reply_text(
+            "That quality is too large for Telegram's standard bot upload limit (about 50 MB). "
+            "Choose a lower quality."
+        )
+    except Exception as exc:
+        log.info("Download/send failed (%s)", type(exc).__name__)
+        await query.message.reply_text(
+            "I couldn't download or send that quality. Try a lower quality or open the original page: "
+            + data["url"],
+            disable_web_page_preview=True,
+        )
 
 
 def main() -> None:
