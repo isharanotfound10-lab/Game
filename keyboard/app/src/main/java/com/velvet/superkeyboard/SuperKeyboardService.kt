@@ -12,7 +12,9 @@ import android.inputmethodservice.InputMethodService
 import android.net.Uri
 import android.text.InputType
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
@@ -26,6 +28,10 @@ class SuperKeyboardService : InputMethodService() {
     private var unicode = false
     private var composingWord = ""
     private var suggestionsRow: LinearLayout? = null
+    private val swipePath = mutableListOf<String>()
+    private var swipeStartX = 0f
+    private var swipeStartY = 0f
+    private var swipeMoved = false
     private val prefs by lazy { getSharedPreferences("keyboard_prefs", Context.MODE_PRIVATE) }
     private val themeName get() = prefs.getString("theme", "Purple")
     private val bg: Int get() = if (themeName == "AMOLED") Color.BLACK else Color.rgb(7, 5, 17)
@@ -172,6 +178,31 @@ class SuperKeyboardService : InputMethodService() {
                 if (shifted) { shifted = false; refreshKeyboard() }
             }
         }
+    }
+
+    private fun findNearestLetter(container: ViewGroup, rawX: Float, rawY: Float): String? {
+        var bestKey: String? = null
+        var bestDistance = Float.MAX_VALUE
+        fun scan(group: ViewGroup) {
+            for (i in 0 until group.childCount) {
+                val child = group.getChildAt(i)
+                if (child is ViewGroup) scan(child)
+                if (child is Button) {
+                    val candidate = child.tag as? String ?: continue
+                    if (candidate.length != 1 || !candidate[0].isLetter()) continue
+                    val location = IntArray(2)
+                    child.getLocationOnScreen(location)
+                    val centerX = location[0] + child.width / 2f
+                    val centerY = location[1] + child.height / 2f
+                    val dx = rawX - centerX
+                    val dy = rawY - centerY
+                    val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+                    if (distance < bestDistance) { bestDistance = distance; bestKey = candidate.lowercase() }
+                }
+            }
+        }
+        scan(container)
+        return if (bestDistance <= dp(58)) bestKey else null
     }
 
     private fun refreshSuggestions() {
