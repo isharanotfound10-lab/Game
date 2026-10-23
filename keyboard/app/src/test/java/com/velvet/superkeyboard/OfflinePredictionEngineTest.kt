@@ -20,4 +20,8 @@ class OfflinePredictionEngineTest {
     @Test fun contextSuggestionsAreReturnedWhenNoPrefix() {
         assertTrue(OfflinePredictionEngine.suggestions("", "thank").contains("you"))
     }
+
+    @Test fun swipeTraceResolvesToNearbyDictionaryWord() {
+        assertEquals("hello", OfflinePredictionEngine.swipeCandidate("helo"))
+    }
 }
