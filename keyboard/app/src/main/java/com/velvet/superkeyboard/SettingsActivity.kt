@@ -10,6 +10,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
@@ -17,84 +18,67 @@ import android.widget.Toast
 
 class SettingsActivity : Activity() {
     private val prefs by lazy { getSharedPreferences("keyboard_prefs", MODE_PRIVATE) }
-    private val purple = Color.rgb(210, 155, 255)
+    private val purple = Color.rgb(210,155,255)
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        render()
-    }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); render() }
 
     private fun render() {
         val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(24, 24, 24, 24)
-            setBackgroundColor(Color.rgb(7, 5, 17))
+            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(24,24,24,24); setBackgroundColor(Color.rgb(7,5,17))
         }
         root.addView(TextView(this).apply {
-            text = "SUPER KEYBOARD"
-            textSize = 25f
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setTextColor(purple)
-            gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(-1, 64))
-
+            text = "SUPER KEYBOARD"; textSize = 25f; typeface = Typeface.create("sans-serif",Typeface.BOLD)
+            setTextColor(purple); gravity = Gravity.CENTER
+        },LinearLayout.LayoutParams(-1,64))
         root.addView(TextView(this).apply {
-            text = "Personalize your keyboard"
-            textSize = 16f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(-1, 36))
-
-        root.addView(actionButton("🎨  Theme: ${prefs.getString("theme", "Purple")}") { chooseTheme() },
-            LinearLayout.LayoutParams(-1, 54))
-
-        val animationSwitch = Switch(this).apply {
-            text = "Smooth animations / effects"
-            textSize = 15f
-            setTextColor(Color.WHITE)
-            isChecked = prefs.getBoolean("animations", true)
-            setOnCheckedChangeListener { _, checked ->
-                prefs.edit().putBoolean("animations", checked).apply()
-                Toast.makeText(this@SettingsActivity, if (checked) "Effects enabled" else "Effects reduced", Toast.LENGTH_SHORT).show()
-            }
-        }
-        root.addView(animationSwitch, LinearLayout.LayoutParams(-1, 56))
-
-        root.addView(actionButton("1  Enable Super Keyboard") {
-            startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
-        }, LinearLayout.LayoutParams(-1, 54))
+            text = "Personalize your keyboard"; textSize = 16f; setTextColor(Color.WHITE); gravity = Gravity.CENTER
+        },LinearLayout.LayoutParams(-1,36))
+        root.addView(actionButton("🎨  Theme: ${prefs.getString("theme","Purple")}") { chooseTheme() },LinearLayout.LayoutParams(-1,54))
+        addSwitch(root,"Smooth animations / effects","animations",true)
+        addSwitch(root,"Show number row","number_row",true)
+        addSwitch(root,"Auto-correct common typos","auto_correct",true)
+        addSwitch(root,"Key haptic feedback","key_haptics",false)
+        root.addView(actionButton("✍  Set email signature") { editSignature() },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("1  Enable Super Keyboard") { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) },LinearLayout.LayoutParams(-1,54))
         root.addView(actionButton("2  Choose Super Keyboard") {
-            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showInputMethodPicker()
-        }, LinearLayout.LayoutParams(-1, 54))
-
+            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker()
+        },LinearLayout.LayoutParams(-1,54))
         root.addView(TextView(this).apply {
-            text = "\nINCLUDED IN THIS BUILD\n• Native typing, Shift, delete, enter and language picker\n• Number/symbol layouts and Unicode symbol panel\n• Emoji insertion and clipboard paste\n• Selected-text tools: case conversion, reverse, whitespace cleanup\n• Theme choices and effects toggle\n\nPrivacy: this starter keyboard does not upload typed text. AI rewriting, predictive dictionaries, swipe typing, GIF search, custom layout builder, and other advanced features are not implemented yet."
-            textSize = 14f
-            setTextColor(Color.rgb(190, 177, 210))
-            setPadding(4, 16, 4, 16)
+            text = "\nFEATURES IN THIS BUILD\n• Native QWERTY typing, shift, delete, enter and system keyboard switching\n• Optional number row, symbols and Unicode symbol panel\n• Offline word suggestions and a small local typo-correction dictionary\n• Emoji picker, clipboard paste and external Tenor GIF search\n• Text tools: case conversion, reverse, whitespace cleanup, typo fixes, date/time and saved signature\n• Five themes, smooth-effects toggle, auto-correct and optional haptics\n\nPRIVACY\nPredictions run locally. Suggestions and correction are disabled in detected password fields. GIF search opens your browser and sends the search query to Tenor. This keyboard does not upload typed text.\n\nLIMITATIONS\nThis build does not yet include a neural AI model, true swipe typing, GIF insertion directly into apps, cloud sync, full multilingual dictionaries, or a visual custom-keyboard designer."
+            textSize = 14f; setTextColor(Color.rgb(190,177,210)); setPadding(4,16,4,16)
         })
         setContentView(root)
     }
 
-    private fun chooseTheme() {
-        val themes = arrayOf("Purple", "Cyber Pink", "Ocean", "Emerald", "AMOLED")
-        val current = prefs.getString("theme", "Purple")
-        AlertDialog.Builder(this)
-            .setTitle("Choose a theme")
-            .setSingleChoiceItems(themes, themes.indexOf(current)) { dialog, which ->
-                prefs.edit().putString("theme", themes[which]).apply()
-                dialog.dismiss()
-                render()
+    private fun addSwitch(root: LinearLayout, label: String, key: String, default: Boolean) {
+        root.addView(Switch(this).apply {
+            text = label; textSize = 15f; setTextColor(Color.WHITE)
+            isChecked = prefs.getBoolean(key,default)
+            setOnCheckedChangeListener { _,checked ->
+                prefs.edit().putBoolean(key,checked).apply()
+                Toast.makeText(this@SettingsActivity,if(checked) "Enabled" else "Disabled",Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        },LinearLayout.LayoutParams(-1,50))
+    }
+
+    private fun editSignature() {
+        val input = EditText(this).apply { setText(prefs.getString("signature","") ?: ""); hint = "Sent from my phone" }
+        AlertDialog.Builder(this).setTitle("Email signature").setMessage("This text is inserted by Text tools.")
+            .setView(input).setNegativeButton("Cancel",null).setPositiveButton("Save") { _,_ ->
+                prefs.edit().putString("signature",input.text.toString()).apply()
+            }.show()
+    }
+
+    private fun chooseTheme() {
+        val themes = arrayOf("Purple","Cyber Pink","Ocean","Emerald","AMOLED")
+        AlertDialog.Builder(this).setTitle("Choose a theme")
+            .setSingleChoiceItems(themes,themes.indexOf(prefs.getString("theme","Purple"))) { dialog,which ->
+                prefs.edit().putString("theme",themes[which]).apply(); dialog.dismiss(); render()
+            }.setNegativeButton("Cancel",null).show()
     }
 
     private fun actionButton(label: String, action: () -> Unit) = Button(this).apply {
-        text = label
-        isAllCaps = false
-        setOnClickListener { action() }
+        text = label; isAllCaps = false; setOnClickListener { action() }
     }
 }
