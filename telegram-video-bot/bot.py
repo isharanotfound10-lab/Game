@@ -131,7 +131,7 @@ async def receive_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         info = await asyncio.to_thread(_extract_info, url)
         formats = list_download_formats(info)
     except Exception as exc:
-        log.warning("Video extraction failed (%s): %s", type(exc).__name__, exc)
+        log.exception("Video extraction failed (%s): %s", type(exc).__name__, exc)
         error_text = str(exc).lower()
         if "410" in error_text or "gone" in error_text:
             user_error = (
