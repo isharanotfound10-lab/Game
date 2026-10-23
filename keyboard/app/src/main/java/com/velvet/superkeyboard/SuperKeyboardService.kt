@@ -105,7 +105,7 @@ class SuperKeyboardService : InputMethodService() {
                 }
                 val special = index == rows.lastIndex || key in listOf("⇧","⌫","?123","ABC","↵")
                 val button = key(label, special)
-                button.setOnClickListener { handleKey(key) }
+                button.setOnClickListener {\n                    if (prefs.getBoolean("key_haptics", false)) button.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)\n                    handleKey(key)\n                }
                 if (key == "⌫") button.setOnLongClickListener {
                     if (composingWord.isNotEmpty()) { composingWord = ""; currentInputConnection?.setComposingText("",1); refreshSuggestions() }
                     else currentInputConnection?.deleteSurroundingText(1000,0)
