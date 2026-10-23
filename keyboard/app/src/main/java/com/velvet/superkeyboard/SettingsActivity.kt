@@ -41,16 +41,31 @@ class SettingsActivity : Activity() {
         addSwitch(root,"Smooth animations / effects","animations",true)
         addSwitch(root,"Show number row","number_row",true)
         addSwitch(root,"Auto-correct common typos","auto_correct",true)
+        addSwitch(root,"Learn words locally as you type","personalized_learning",true)
         addSwitch(root,"Automatic sentence capitalization","auto_capitalize",true)
         addSwitch(root,"Double-space inserts a period","double_space_period",true)
         addSwitch(root,"Key haptic feedback","key_haptics",false)
         root.addView(actionButton("✍  Set email signature") { editSignature() },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("🧹  Clear saved clipboard history") {
+            prefs.edit().remove("clipboard_history_json").apply()
+            Toast.makeText(this,"Saved clipboard history cleared",Toast.LENGTH_SHORT).show()
+        },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("🧠  Reset learned words") {
+            AlertDialog.Builder(this).setTitle("Reset learned words?")
+                .setMessage("This removes the keyboard's locally learned word list.")
+                .setNegativeButton("Cancel",null).setPositiveButton("Reset") { _,_ ->
+                    prefs.edit().remove("learned_words").apply()
+                    Toast.makeText(this,"Learned words cleared",Toast.LENGTH_SHORT).show()
+                }.show()
+        },LinearLayout.LayoutParams(-1,50))
         root.addView(actionButton("1  Enable Super Keyboard") { startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) },LinearLayout.LayoutParams(-1,54))
         root.addView(actionButton("2  Choose Super Keyboard") {
             (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker()
         },LinearLayout.LayoutParams(-1,54))
         root.addView(TextView(this).apply {
-            text = "\nFEATURES IN THIS BUILD\n• Native QWERTY typing, shift, delete, enter and system keyboard switching\n• Optional number row, symbols, Unicode panel, QWERTY/Dvorak/Colemak layouts and three key sizes\n• Offline word suggestions, common-typo correction and basic glide typing\n• Emoji picker, clipboard paste and external Tenor GIF search\n• Text tools: case conversion, reverse, whitespace cleanup, typo fixes, date/time, saved snippets, session-only clipboard history and saved signature\n• Five themes, smooth-effects toggle, auto-correct, auto-capitalization, double-space punctuation and optional haptics\n\nPRIVACY\nPredictions run locally. Suggestions and correction are disabled in detected password fields. GIF search opens your browser and sends the search query to Tenor. This keyboard does not upload typed text.\n\nLIMITATIONS\nThis build does not yet include a neural on-device AI model, advanced personalized swipe prediction, GIF insertion directly into apps, cloud sync, full multilingual dictionaries, or a visual custom-keyboard designer."
+            text = "\nFEATURES IN THIS BUILD\n• Native QWERTY typing, shift, delete, enter and system keyboard switching\n• Optional number row, symbols, Unicode panel, QWERTY/Dvorak/Colemak layouts and three key sizes\n• Offline word suggestions, common-typo correction and basic glide typing\n• Emoji picker, clipboard paste and external Tenor GIF search\n• Text tools: case conversion, reverse, whitespace cleanup, typo fixes, date/time, saved snippets, persistent on-device clipboard history and saved signature
+• Horizontal glass-shine reflection on keys and toolbar: 2100 ms travel, 1200 ms pause, 35% intensity; follows the smooth-effects toggle
+• Optional local personalization learns up to 2000 words from non-password text\n• Five themes, smooth-effects toggle, auto-correct, auto-capitalization, double-space punctuation and optional haptics\n\nPRIVACY\nPredictions run locally. Suggestions and correction are disabled in detected password fields. GIF search opens your browser and sends the search query to Tenor. This keyboard does not upload typed text.\n\nLIMITATIONS\nThis build does not yet include a neural on-device AI model, advanced neural swipe prediction, GIF insertion directly into apps, cloud sync, full downloadable multilingual dictionaries, or a drag-and-drop visual keyboard designer. Local word learning is lightweight dictionary personalization, not a neural AI model. Clipboard history is stored on this device; use the clear-history button on shared devices."
             textSize = 14f; setTextColor(Color.rgb(190,177,210)); setPadding(4,16,4,16)
         })
         val scroll = ScrollView(this)
