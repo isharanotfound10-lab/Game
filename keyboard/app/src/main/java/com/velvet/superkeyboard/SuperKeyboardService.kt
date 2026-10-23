@@ -178,7 +178,24 @@ class SuperKeyboardService : InputMethodService() {
         }
         return root
     }
-    private fun letterRows(): List<List<String>> = when (prefs.getString("layout", "QWERTY")) {
+    private fun letterRows(): List<List<String>> {
+        val custom = prefs.getString("custom_layout_rows", "").orEmpty()
+        if (custom.isNotBlank()) {
+            val rows = custom.lines().take(3).map { line -> line.codePoints().toArray().map { String(Character.toChars(it)) } }
+            if (rows.size == 3 && rows.all { it.isNotEmpty() }) return rows
+        }
+        val language = prefs.getString("dictionary_language", "English") ?: "English"
+        if (language == "Sinhala") return listOf(
+            listOf("අ","ආ","ඇ","ඉ","ඊ","උ","එ","ඔ","ක","ග"),
+            listOf("ච","ජ","ට","ඩ","ත","ද","න","ප","බ"),
+            listOf("ම","ය","ර","ල","ව","ස","හ","ළ","ෆ")
+        )
+        if (language == "Tamil") return listOf(
+            listOf("அ","ஆ","இ","ஈ","உ","ஊ","எ","ஏ","க","ங"),
+            listOf("ச","ஞ","ட","ண","த","ந","ப","ம","ய"),
+            listOf("ர","ல","வ","ழ","ள","ற","ன","ஜ","ஹ")
+        )
+        return when (prefs.getString("layout", "QWERTY")) {
         "Dvorak" -> listOf(
             listOf("'",",",".","p","y","f","g","c","r","l"),
             listOf("a","o","e","u","i","d","h","t","n","s"),
@@ -191,6 +208,7 @@ class SuperKeyboardService : InputMethodService() {
             listOf("q","w","e","r","t","y","u","i","o","p"),
             listOf("a","s","d","f","g","h","j","k","l"),
             listOf("⇧","z","x","c","v","b","n","m","⌫"))
+        }
     }
     private fun refreshKeyboard() { setInputView(buildKeyboard()) }
 
@@ -285,7 +303,7 @@ class SuperKeyboardService : InputMethodService() {
             val personal = if (prefs.getBoolean("personalized_learning", true)) learnedWords
                 .filter { it.startsWith(composingWord.lowercase()) && it != composingWord.lowercase() }
                 .sortedBy { it.length }.take(3) else emptyList()
-            (personal + OfflinePredictionEngine.suggestions(composingWord, previousWord())).distinct().take(3)
+            (personal + OfflinePredictionEngine.suggestions(composingWord, previousWord(), prefs.getString("dictionary_language", "English") ?: "English")).distinct().take(3)
         }
         val labels = if (composingWord.isNotEmpty()) matches else listOf("✦", "Offline typing", "Tools")
         labels.take(3).forEachIndexed { index, value ->
