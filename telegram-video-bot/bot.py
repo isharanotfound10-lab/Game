@@ -50,8 +50,10 @@ def ydl_options() -> dict:
         "no_warnings": True,
         "noplaylist": True,
         "skip_download": True,
-        "socket_timeout": 20,
-        "retries": 1,
+        "socket_timeout": 25,
+        "retries": 2,
+        # curl-cffi (requirements.txt) lets yt-dlp use a browser-like TLS fingerprint.
+        "impersonate": "chrome",
     }
 
 
@@ -129,10 +131,20 @@ async def receive_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         info = await asyncio.to_thread(_extract_info, url)
         formats = list_download_formats(info)
     except Exception as exc:
-        log.info("Video extraction failed (%s)", type(exc).__name__)
-        await message.reply_text(
-            "I couldn't read that page. It may be private, unavailable, session restricted, or unsupported."
-        )
+        log.warning("Video extraction failed (%s): %s", type(exc).__name__, exc)
+        error_text = str(exc).lower()
+        if "410" in error_text or "gone" in error_text:
+            user_error = (
+                "Pornhub returned HTTP 410 (Gone) before video qualities could be read. "
+                "I retried with a browser-like request, but the site may still be rejecting this server "
+                "or yt-dlp may need a site-side fix. This is not a Telegram upload error."
+            )
+        else:
+            user_error = (
+                "I couldn't read that page. It may be private, unavailable, session restricted, "
+                "or unsupported. Check the bot's GitHub Actions log for the detailed error."
+            )
+        await message.reply_text(user_error)
         return
 
     title = str(info.get("title") or "Video")[:180]
@@ -163,7 +175,8 @@ def _download_format(url: str, format_id: str, output_dir: str) -> str:
         "no_warnings": True,
         "noplaylist": True,
         "socket_timeout": 30,
-        "retries": 1,
+        "retries": 2,
+        "impersonate": "chrome",
         "format": format_id,
         "outtmpl": str(Path(output_dir) / "video.%(ext)s"),
         "max_filesize": MAX_UPLOAD_BYTES,
