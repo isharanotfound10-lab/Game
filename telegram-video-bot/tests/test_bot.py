@@ -1,4 +1,9 @@
+import sys
 import unittest
+from pathlib import Path
+
+# Support discovery both from the repository root and from telegram-video-bot/.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bot import list_download_formats, valid_video_url
 
