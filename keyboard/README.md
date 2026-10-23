@@ -10,7 +10,7 @@ Standalone native Android input method under `keyboard/` in the Game repository.
 - Clipboard paste.
 - GIF search shortcut that opens Tenor in the browser; GIFs are not inserted directly into the current app.
 - Text utilities for uppercase/lowercase/title case/reverse/whitespace cleanup/common typo fixes, plus date/time and a saved signature.
-- Five themes (Purple, Cyber Pink, Ocean, Emerald, AMOLED), effects toggle, auto-correct toggle, number-row toggle, optional haptics setting, and signature settings.
+- Five themes (Purple, Cyber Pink, Ocean, Emerald, AMOLED), smooth-effects toggle, auto-correct toggle, optional haptics, saved signature, number-row toggle, QWERTY/Dvorak/Colemak layouts, and compact/normal/tall key sizes.
 - GitHub Actions build and unit tests.
 
 ## Build
