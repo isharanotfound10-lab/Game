@@ -49,6 +49,8 @@ object OfflinePredictionEngine {
     fun swipeCandidate(trace: String): String {
         val clean = trace.lowercase().filter { it.isLetter() }
         if (clean.length < 3) return ""
+        val knownCorrection = correct(clean)
+        if (knownCorrection != clean) return knownCorrection
         return words.asSequence()
             .filter { kotlin.math.abs(it.length - clean.length) <= 3 }
             .map { it to editDistance(clean, it) }
@@ -76,7 +78,7 @@ object OfflinePredictionEngine {
 
     fun correct(word: String): String {
         val lower = word.lowercase()
-        val common = mapOf("teh" to "the", "adn" to "and", "taht" to "that", "thier" to "their", "recieve" to "receive", "becuase" to "because", "dont" to "don't", "cant" to "can't", "wont" to "won't")
+        val common = mapOf("teh" to "the", "adn" to "and", "taht" to "that", "thier" to "their", "recieve" to "receive", "becuase" to "because", "helo" to "hello", "dont" to "don't", "cant" to "can't", "wont" to "won't")
         return common[lower] ?: word
     }
 }
