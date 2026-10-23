@@ -1,6 +1,7 @@
 package com.velvet.superkeyboard
 
 import android.app.AlertDialog
+import org.json.JSONArray
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -29,7 +30,15 @@ class SuperKeyboardService : InputMethodService() {
     private var composingWord = ""
     private var suggestionsRow: LinearLayout? = null
     private val swipePath = mutableListOf<String>()
-    private val recentClipboard = mutableListOf<String>()
+    private val recentClipboard: MutableList<String> by lazy {
+        try {
+            val json = JSONArray(prefs.getString("clipboard_history_json", "[]") ?: "[]")
+            MutableList(json.length()) { index -> json.optString(index) }.filter { it.isNotBlank() }.toMutableList()
+        } catch (_: Exception) { mutableListOf() }
+    }
+    private val learnedWords: MutableSet<String> by lazy {
+        prefs.getStringSet("learned_words", emptySet())?.toMutableSet() ?: mutableSetOf()
+    }
     private var swipeStartX = 0f
     private var swipeStartY = 0f
     private var swipeMoved = false
@@ -133,6 +142,7 @@ class SuperKeyboardService : InputMethodService() {
                                 if (swipeMoved && swipePath.size >= 3) {
                                     val candidate = OfflinePredictionEngine.swipeCandidate(swipePath.joinToString(""))
                                     if (candidate.isNotEmpty()) {
+                                        rememberWord(candidate)
                                         currentInputConnection?.commitText(candidate + " ", 1)
                                         composingWord = ""
                                         refreshSuggestions()
@@ -198,7 +208,8 @@ class SuperKeyboardService : InputMethodService() {
             "SPACE" -> {
                 if (composingWord.isNotEmpty()) {
                     val corrected = if (prefs.getBoolean("auto_correct",true) && !sensitiveField) OfflinePredictionEngine.correct(composingWord) else composingWord
-                    ic.commitText("$corrected ",1); composingWord = ""
+                    rememberWord(corrected)
+                    ic.commitText("$corrected ",1)
                     lastSpaceAt = 0L
                 } else {
                     val now = System.currentTimeMillis()
@@ -269,7 +280,12 @@ class SuperKeyboardService : InputMethodService() {
     private fun refreshSuggestions() {
         val row = suggestionsRow ?: return
         row.removeAllViews()
-        val matches = if (sensitiveField) emptyList() else OfflinePredictionEngine.suggestions(composingWord, previousWord())
+        val matches = if (sensitiveField) emptyList() else {
+            val personal = if (prefs.getBoolean("personalized_learning", true)) learnedWords
+                .filter { it.startsWith(composingWord.lowercase()) && it != composingWord.lowercase() }
+                .sortedBy { it.length }.take(3) else emptyList()
+            (personal + OfflinePredictionEngine.suggestions(composingWord, previousWord())).distinct().take(3)
+        }
         val labels = if (composingWord.isNotEmpty()) matches else listOf("✦", "Offline typing", "Tools")
         labels.take(3).forEachIndexed { index, value ->
             row.addView(TextView(this).apply {
@@ -290,8 +306,7 @@ class SuperKeyboardService : InputMethodService() {
         val clip = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         val text = if (clip.hasPrimaryClip()) clip.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() else null
         if (!text.isNullOrEmpty()) {
-            if (recentClipboard.firstOrNull() != text) recentClipboard.add(0, text)
-            while (recentClipboard.size > 10) recentClipboard.removeAt(recentClipboard.lastIndex)
+            rememberClipboard(text)
             currentInputConnection?.commitText(text,1)
         } else Toast.makeText(this,"Clipboard is empty",Toast.LENGTH_SHORT).show()
     }
@@ -397,12 +412,30 @@ class SuperKeyboardService : InputMethodService() {
             }.show()
     }
 
+    private fun rememberClipboard(value: String) {
+        if (value.isBlank() || sensitiveField) return
+        if (recentClipboard.firstOrNull() != value) recentClipboard.add(0, value)
+        while (recentClipboard.size > 20) recentClipboard.removeAt(recentClipboard.lastIndex)
+        val json = JSONArray()
+        recentClipboard.forEach { json.put(it) }
+        prefs.edit().putString("clipboard_history_json", json.toString()).apply()
+    }
+
+    private fun rememberWord(value: String) {
+        if (sensitiveField || !prefs.getBoolean("personalized_learning", true)) return
+        val word = value.lowercase().filter { it.isLetter() || it == 39.toChar() || it == '-' }
+        if (word.length < 2 || word.length > 40) return
+        learnedWords.add(word)
+        while (learnedWords.size > 2000) learnedWords.remove(learnedWords.first())
+        prefs.edit().putStringSet("learned_words", learnedWords).apply()
+    }
+
     private fun chooseRecentClipboard() {
         if (recentClipboard.isEmpty()) {
-            Toast.makeText(this, "No clipboard items captured in this keyboard session", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No clipboard items saved yet", Toast.LENGTH_SHORT).show()
             return
         }
-        AlertDialog.Builder(this).setTitle("Recent clipboard (session only)")
+        AlertDialog.Builder(this).setTitle("Recent clipboard (saved on device)")
             .setItems(recentClipboard.map { it.replace("\n", " ").take(70) }.toTypedArray()) { _, index ->
                 currentInputConnection?.commitText(recentClipboard[index], 1)
             }.show()
@@ -411,13 +444,16 @@ class SuperKeyboardService : InputMethodService() {
     private fun key(label: String, special: Boolean) = Button(this).apply {
         text = label; textSize = if (label.length > 3) 10.5f else 18f; isAllCaps = false
         setTextColor(Color.WHITE); typeface = Typeface.create("sans-serif-medium",Typeface.NORMAL)
-        background = glass(if (special) Color.rgb(74,37,105) else keyColor)
+        background = if (prefs.getBoolean("animations", true)) ShineGlassDrawable(
+            if (special) Color.rgb(74,37,105) else keyColor, themeAccent, dp(12).toFloat()
+        ) else glass(if (special) Color.rgb(74,37,105) else keyColor)
         stateListAnimator = null; minimumWidth = 0; minWidth = 0; minimumHeight = 0; minHeight = 0
         setPadding(0,0,0,0); elevation = if (prefs.getBoolean("animations",true)) dp(2).toFloat() else 0f
     }
     private fun tool(label: String, description: String, action: () -> Unit): View = TextView(this).apply {
         text = label; contentDescription = description; textSize = if (label == "GIF") 12f else 19f
-        gravity = Gravity.CENTER; setTextColor(Color.WHITE); background = glass(Color.rgb(37,22,58))
+        gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+        background = if (prefs.getBoolean("animations", true)) ShineGlassDrawable(Color.rgb(37,22,58), themeAccent, dp(12).toFloat()) else glass(Color.rgb(37,22,58))
         setOnClickListener { action() }; layoutParams = weight()
     }
     private fun glass(color: Int) = GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(lighten(color),color)).apply {
