@@ -210,6 +210,7 @@ class SuperKeyboardService : InputMethodService() {
                     val corrected = if (prefs.getBoolean("auto_correct",true) && !sensitiveField) OfflinePredictionEngine.correct(composingWord) else composingWord
                     rememberWord(corrected)
                     ic.commitText("$corrected ",1)
+                    composingWord = ""
                     lastSpaceAt = 0L
                 } else {
                     val now = System.currentTimeMillis()
