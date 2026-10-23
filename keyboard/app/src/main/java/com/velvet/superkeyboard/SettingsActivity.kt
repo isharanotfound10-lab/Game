@@ -41,6 +41,7 @@ class SettingsActivity : Activity() {
         root.addView(actionButton("🧩  Keyboard appearance / key shape") { chooseKeyAppearance() },LinearLayout.LayoutParams(-1,50))
         root.addView(actionButton("🌐  Typing language: ${prefs.getString("dictionary_language","English")}") { chooseDictionaryLanguage() },LinearLayout.LayoutParams(-1,50))
         root.addView(actionButton("🛠  Custom keyboard rows") { editCustomLayout() },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("🎨  Customize individual key") { customizeIndividualKey() },LinearLayout.LayoutParams(-1,50))
         addSwitch(root,"Smooth animations / effects","animations",true)
         addSwitch(root,"Show number row","number_row",true)
         addSwitch(root,"Auto-correct common typos","auto_correct",true)
@@ -157,6 +158,53 @@ class SettingsActivity : Activity() {
                     Toast.makeText(this, "Enter exactly three non-empty rows, each with 5–12 characters.", Toast.LENGTH_LONG).show()
                 }
             }.show()
+    }
+
+    private fun customizeIndividualKey() {
+        val keyInput = EditText(this).apply {
+            hint = "Key character (for example: a, SPACE, or ?123)"
+            setText("a")
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this).setTitle("Choose a key")
+            .setMessage("Set a color and width for one key. Use SPACE for the spacebar.")
+            .setView(keyInput)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Continue") { _, _ ->
+                val key = keyInput.text.toString().trim()
+                if (key.isEmpty() || key.length > 8) {
+                    Toast.makeText(this, "Enter one key label (up to 8 characters).", Toast.LENGTH_SHORT).show()
+                } else chooseIndividualKeyColor(key)
+            }.show()
+    }
+
+    private fun chooseIndividualKeyColor(key: String) {
+        val colors = arrayOf("Default theme", "Purple", "Pink", "Blue", "Green", "Amber")
+        val values = arrayOf("", "#733CCB", "#C52F94", "#167DB3", "#16835B", "#9B6514")
+        val saved = prefs.getString("key_color_$key", "") ?: ""
+        val selected = values.indexOf(saved).coerceAtLeast(0)
+        AlertDialog.Builder(this).setTitle("Color for '$key'")
+            .setSingleChoiceItems(colors, selected) { dialog, which ->
+                if (values[which].isBlank()) prefs.edit().remove("key_color_$key").apply()
+                else prefs.edit().putString("key_color_$key", values[which]).apply()
+                dialog.dismiss()
+                chooseIndividualKeyWidth(key)
+            }.setNegativeButton("Cancel", null).show()
+    }
+
+    private fun chooseIndividualKeyWidth(key: String) {
+        val labels = arrayOf("Narrow (0.75×)", "Normal (1×)", "Wide (1.25×)", "Extra wide (1.5×)")
+        val values = floatArrayOf(0.75f, 1f, 1.25f, 1.5f)
+        val current = prefs.getFloat("key_width_$key", 1f)
+        val selected = values.indices.minByOrNull { kotlin.math.abs(values[it] - current) } ?: 1
+        AlertDialog.Builder(this).setTitle("Width for '$key'")
+            .setSingleChoiceItems(labels, selected) { dialog, which ->
+                if (values[which] == 1f) prefs.edit().remove("key_width_$key").apply()
+                else prefs.edit().putFloat("key_width_$key", values[which]).apply()
+                dialog.dismiss()
+                Toast.makeText(this, "Key style saved. Reopen the keyboard to apply.", Toast.LENGTH_SHORT).show()
+                render()
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun editSignature() {
