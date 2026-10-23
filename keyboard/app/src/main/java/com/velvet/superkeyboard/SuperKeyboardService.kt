@@ -445,9 +445,7 @@ class SuperKeyboardService : InputMethodService() {
     private fun key(label: String, special: Boolean) = Button(this).apply {
         text = label; textSize = if (label.length > 3) 10.5f else 18f; isAllCaps = false
         setTextColor(Color.WHITE); typeface = Typeface.create("sans-serif-medium",Typeface.NORMAL)
-        background = if (prefs.getBoolean("animations", true)) ShineGlassDrawable(
-            if (special) Color.rgb(74,37,105) else keyColor, themeAccent, dp(12).toFloat()
-        ) else glass(if (special) Color.rgb(74,37,105) else keyColor)
+        background = glass(if (special) Color.rgb(74,37,105) else keyColor)
         stateListAnimator = null; minimumWidth = 0; minWidth = 0; minimumHeight = 0; minHeight = 0
         setPadding(0,0,0,0); elevation = if (prefs.getBoolean("animations",true)) dp(2).toFloat() else 0f
     }
