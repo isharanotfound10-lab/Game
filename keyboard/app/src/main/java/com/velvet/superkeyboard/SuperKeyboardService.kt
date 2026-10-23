@@ -20,8 +20,21 @@ class SuperKeyboardService : InputMethodService() {
     private var shifted = false
     private var symbols = false
     private var unicode = false
-    private val bg = Color.rgb(7, 5, 17)
-    private val keyColor = Color.rgb(30, 22, 48)
+    private val bg: Int get() = if (prefs.getString("theme", "Purple") == "AMOLED") Color.BLACK else Color.rgb(7, 5, 17)
+    private val keyColor: Int get() = when (prefs.getString("theme", "Purple")) {
+        "Cyber Pink" -> Color.rgb(57, 17, 43)
+        "Ocean" -> Color.rgb(13, 37, 54)
+        "Emerald" -> Color.rgb(15, 43, 35)
+        "AMOLED" -> Color.rgb(18, 18, 22)
+        else -> Color.rgb(30, 22, 48)
+    }
+    private val themeAccent: Int get() = when (prefs.getString("theme", "Purple")) {
+        "Cyber Pink" -> Color.rgb(236, 56, 188)
+        "Ocean" -> Color.rgb(54, 190, 255)
+        "Emerald" -> Color.rgb(65, 220, 155)
+        "AMOLED" -> Color.rgb(190, 150, 255)
+        else -> Color.rgb(160, 80, 255)
+    }
     private val prefs by lazy { getSharedPreferences("keyboard_prefs", Context.MODE_PRIVATE) }
 
     override fun onCreateInputView(): View = buildKeyboard()
@@ -32,7 +45,7 @@ class SuperKeyboardService : InputMethodService() {
             setPadding(dp(6), dp(7), dp(6), dp(8))
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(bg, Color.rgb(20, 7, 38), Color.rgb(8, 5, 18))
+                intArrayOf(bg, if (prefs.getString("theme", "Purple") == "AMOLED") Color.BLACK else Color.rgb(20, 7, 38), Color.rgb(8, 5, 18))
             ).apply { cornerRadius = dp(18).toFloat() }
         }
 
@@ -216,7 +229,7 @@ class SuperKeyboardService : InputMethodService() {
         intArrayOf(lighten(color), color)
     ).apply {
         cornerRadius = dp(12).toFloat()
-        setStroke(dp(1), Color.argb(75, 205, 160, 255))
+        setStroke(dp(1), Color.argb(75, Color.red(themeAccent), Color.green(themeAccent), Color.blue(themeAccent)))
     }
 
     private fun lighten(color: Int): Int = Color.rgb(
