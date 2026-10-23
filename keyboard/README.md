@@ -9,8 +9,9 @@ Standalone native Android input method under `keyboard/` in the Game repository.
 - Emoji picker with multiple categories.
 - Clipboard paste.
 - GIF search shortcut that opens Tenor in the browser; GIFs are not inserted directly into the current app.
-- Text utilities for uppercase/lowercase/title case/reverse/whitespace cleanup/common typo fixes, plus date/time and a saved signature.
-- Five themes (Purple, Cyber Pink, Ocean, Emerald, AMOLED), smooth-effects toggle, auto-correct toggle, optional haptics, saved signature, number-row toggle, QWERTY/Dvorak/Colemak layouts, and compact/normal/tall key sizes.
+- Text utilities for uppercase/lowercase/title case/reverse/whitespace cleanup/common typo fixes, date/time, saved snippets, and signature insertion.
+- Session-only clipboard history (items are not persisted after the keyboard service session), sentence auto-capitalization, and optional double-space-to-period punctuation.
+- Five themes (Purple, Cyber Pink, Ocean, Emerald, AMOLED), smooth-effects toggle, auto-correct, auto-capitalization, double-space punctuation, optional haptics, saved signature, number-row toggle, QWERTY/Dvorak/Colemak layouts, and compact/normal/tall key sizes.
 - GitHub Actions build and unit tests.
 
 ## Build
