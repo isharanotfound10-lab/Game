@@ -38,6 +38,7 @@ class SettingsActivity : Activity() {
         root.addView(actionButton("🎨  Theme: ${prefs.getString("theme","Purple")}") { chooseTheme() },LinearLayout.LayoutParams(-1,54))
         root.addView(actionButton("⌨  Layout: ${prefs.getString("layout","QWERTY")}") { chooseLayout() },LinearLayout.LayoutParams(-1,50))
         root.addView(actionButton("↕  Key size: ${prefs.getString("key_size","Normal")}") { chooseKeySize() },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("🧩  Keyboard appearance / key shape") { chooseKeyAppearance() },LinearLayout.LayoutParams(-1,50))
         addSwitch(root,"Smooth animations / effects","animations",true)
         addSwitch(root,"Show number row","number_row",true)
         addSwitch(root,"Auto-correct common typos","auto_correct",true)
@@ -95,6 +96,20 @@ class SettingsActivity : Activity() {
             .setSingleChoiceItems(sizes,sizes.indexOf(prefs.getString("key_size","Normal"))) { dialog,which ->
                 prefs.edit().putString("key_size",sizes[which]).apply(); dialog.dismiss(); render()
             }.setNegativeButton("Cancel",null).show()
+    }
+
+    private fun chooseKeyAppearance() {
+        val labels = arrayOf("Square (4)", "Soft (8)", "Glass (12)", "Round (18)", "Pill (26)")
+        val values = intArrayOf(4, 8, 12, 18, 26)
+        val current = prefs.getInt("custom_key_radius", 12)
+        val selected = values.indices.minByOrNull { kotlin.math.abs(values[it] - current) } ?: 2
+        AlertDialog.Builder(this).setTitle("Key shape")
+            .setSingleChoiceItems(labels, selected) { dialog, which ->
+                prefs.edit().putInt("custom_key_radius", values[which]).apply()
+                dialog.dismiss()
+                Toast.makeText(this, "Key shape saved. Reopen the keyboard to apply.", Toast.LENGTH_SHORT).show()
+                render()
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun editSignature() {
