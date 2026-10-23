@@ -107,7 +107,51 @@ class SuperKeyboardService : InputMethodService() {
                 }
                 val special = index == rows.lastIndex || key in listOf("⇧","⌫","?123","ABC","↵")
                 val button = key(label, special)
-                button.setOnClickListener {\n                    if (prefs.getBoolean("key_haptics", false)) button.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)\n                    handleKey(key)\n                }
+                button.tag = key
+                if (!symbols && !unicode && key.length == 1 && key[0].isLetter()) {
+                    button.setOnTouchListener { _, event ->
+                        when (event.actionMasked) {
+                            MotionEvent.ACTION_DOWN -> {
+                                swipePath.clear()
+                                swipePath.add(key.lowercase())
+                                swipeStartX = event.rawX
+                                swipeStartY = event.rawY
+                                swipeMoved = false
+                            }
+                            MotionEvent.ACTION_MOVE -> {
+                                val dx = event.rawX - swipeStartX
+                                val dy = event.rawY - swipeStartY
+                                if (kotlin.math.sqrt(dx * dx + dy * dy) > dp(14)) swipeMoved = true
+                                if (swipeMoved) {
+                                    val nearest = findNearestLetter(root, event.rawX, event.rawY)
+                                    if (nearest != null && swipePath.lastOrNull() != nearest) swipePath.add(nearest)
+                                }
+                            }
+                            MotionEvent.ACTION_UP -> {
+                                if (swipeMoved && swipePath.size >= 3) {
+                                    val candidate = OfflinePredictionEngine.swipeCandidate(swipePath.joinToString(""))
+                                    if (candidate.isNotEmpty()) {
+                                        currentInputConnection?.commitText(candidate + " ", 1)
+                                        composingWord = ""
+                                        refreshSuggestions()
+                                    } else {
+                                        if (prefs.getBoolean("key_haptics", false)) button.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                                        handleKey(key)
+                                    }
+                                } else {
+                                    if (prefs.getBoolean("key_haptics", false)) button.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                                    handleKey(key)
+                                }
+                                swipePath.clear()
+                            }
+                            MotionEvent.ACTION_CANCEL -> swipePath.clear()
+                        }
+                        true
+                    }
+                } else button.setOnClickListener {
+                    if (prefs.getBoolean("key_haptics", false)) button.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                    handleKey(key)
+                }
                 if (key == "⌫") button.setOnLongClickListener {
                     if (composingWord.isNotEmpty()) { composingWord = ""; currentInputConnection?.setComposingText("",1); refreshSuggestions() }
                     else currentInputConnection?.deleteSurroundingText(1000,0)
