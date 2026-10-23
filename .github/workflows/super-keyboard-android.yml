@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: super-keyboard-${{ github.workflow }}-${{ github.ref }}
+  group: super-keyboard-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
