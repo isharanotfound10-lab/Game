@@ -88,11 +88,7 @@ class SuperKeyboardService : InputMethodService() {
                 listOf("ABC","🌐",",","SPACE",".","↵"))
             else -> {
                 val numberRow = if (prefs.getBoolean("number_row", true)) listOf("1","2","3","4","5","6","7","8","9","0") else emptyList()
-                listOfNotNull(numberRow.takeIf { it.isNotEmpty() },
-                    listOf("q","w","e","r","t","y","u","i","o","p"),
-                    listOf("a","s","d","f","g","h","j","k","l"),
-                    listOf("⇧","z","x","c","v","b","n","m","⌫"),
-                    listOf("?123","🌐",",","SPACE",".","↵"))
+                listOfNotNull(numberRow.takeIf { it.isNotEmpty() }) + letterRows() + listOf(listOf("?123","🌐",",","SPACE",".","↵"))
             }
         }
         rows.forEachIndexed { index, row ->
@@ -111,12 +107,28 @@ class SuperKeyboardService : InputMethodService() {
                     else currentInputConnection?.deleteSurroundingText(1000,0)
                     true
                 }
-                val lp = LinearLayout.LayoutParams(0, dp(if (key == "SPACE" || key == "↵") 47 else 43), if (key == "SPACE") 4.1f else 1f)
+                val heightExtra = when (prefs.getString("key_size", "Normal")) { "Compact" -> -5; "Tall" -> 6; else -> 0 }
+                val lp = LinearLayout.LayoutParams(0, dp((if (key == "SPACE" || key == "↵") 47 else 43) + heightExtra), if (key == "SPACE") 4.1f else 1f)
                 lp.setMargins(dp(2),dp(3),dp(2),dp(3)); line.addView(button,lp)
             }
-            root.addView(line, LinearLayout.LayoutParams(-1,dp(if (index == rows.lastIndex) 51 else 47)))
+            val heightExtra = when (prefs.getString("key_size", "Normal")) { "Compact" -> -5; "Tall" -> 6; else -> 0 }
+            root.addView(line, LinearLayout.LayoutParams(-1,dp((if (index == rows.lastIndex) 51 else 47) + heightExtra)))
         }
         return root
+    }
+    private fun letterRows(): List<List<String>> = when (prefs.getString("layout", "QWERTY")) {
+        "Dvorak" -> listOf(
+            listOf("'",",",".","p","y","f","g","c","r","l"),
+            listOf("a","o","e","u","i","d","h","t","n","s"),
+            listOf("⇧",";","q","j","k","x","b","m","w","v","z","⌫"))
+        "Colemak" -> listOf(
+            listOf("q","w","f","p","g","j","l","u","y",";"),
+            listOf("a","r","s","t","d","h","n","e","i","o"),
+            listOf("⇧","z","x","c","v","b","k","m",",",".","⌫"))
+        else -> listOf(
+            listOf("q","w","e","r","t","y","u","i","o","p"),
+            listOf("a","s","d","f","g","h","j","k","l"),
+            listOf("⇧","z","x","c","v","b","n","m","⌫"))
     }
     private fun refreshKeyboard() { setInputView(buildKeyboard()) }
 
