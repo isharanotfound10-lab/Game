@@ -29,6 +29,7 @@ class SuperKeyboardService : InputMethodService() {
     private var composingWord = ""
     private var suggestionsRow: LinearLayout? = null
     private val swipePath = mutableListOf<String>()
+    private val recentClipboard = mutableListOf<String>()
     private var swipeStartX = 0f
     private var swipeStartY = 0f
     private var swipeMoved = false
@@ -272,8 +273,11 @@ class SuperKeyboardService : InputMethodService() {
     private fun pasteClipboard() {
         val clip = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         val text = if (clip.hasPrimaryClip()) clip.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() else null
-        if (!text.isNullOrEmpty()) currentInputConnection?.commitText(text,1)
-        else Toast.makeText(this,"Clipboard is empty",Toast.LENGTH_SHORT).show()
+        if (!text.isNullOrEmpty()) {
+            if (recentClipboard.firstOrNull() != text) recentClipboard.add(0, text)
+            while (recentClipboard.size > 10) recentClipboard.removeAt(recentClipboard.lastIndex)
+            currentInputConnection?.commitText(text,1)
+        } else Toast.makeText(this,"Clipboard is empty",Toast.LENGTH_SHORT).show()
     }
 
     private fun showEmojiPicker() {
@@ -307,13 +311,16 @@ class SuperKeyboardService : InputMethodService() {
         val ic = currentInputConnection ?: return
         val selected = ic.getSelectedText(0)?.toString()
         if (selected.isNullOrEmpty()) {
-            val options = arrayOf("Insert date","Insert time","Insert saved signature","Paste clipboard")
+            val options = arrayOf("Insert date","Insert time","Insert saved signature","Paste clipboard","Insert saved snippet","Manage snippets","Recent clipboard")
             AlertDialog.Builder(this).setTitle("Text tools").setItems(options) { _,which ->
                 when(which) {
                     0 -> ic.commitText(java.text.SimpleDateFormat("yyyy-MM-dd",java.util.Locale.getDefault()).format(java.util.Date()),1)
                     1 -> ic.commitText(java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date()),1)
                     2 -> ic.commitText(prefs.getString("signature","") ?: "",1)
                     3 -> pasteClipboard()
+                    4 -> chooseSnippet()
+                    5 -> addSnippet()
+                    6 -> chooseRecentClipboard()
                 }
             }.show()
             return
@@ -333,6 +340,56 @@ class SuperKeyboardService : InputMethodService() {
                 Toast.makeText(this,"Copied",Toast.LENGTH_SHORT).show()
             } else ic.commitText(transformed,1)
         }.setNegativeButton("Cancel",null).show()
+    }
+
+    private fun savedSnippets(): MutableSet<String> =
+        (prefs.getStringSet("snippets", emptySet()) ?: emptySet()).toMutableSet()
+
+    private fun chooseSnippet() {
+        val snippets = savedSnippets().toList().sorted()
+        if (snippets.isEmpty()) {
+            Toast.makeText(this, "No snippets saved yet. Use Manage snippets first.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val names = snippets.map { it.substringBefore("\u0000") }
+        AlertDialog.Builder(this).setTitle("Insert snippet").setItems(names.toTypedArray()) { _, index ->
+            currentInputConnection?.commitText(snippets[index].substringAfter("\u0000", ""), 1)
+        }.show()
+    }
+
+    private fun addSnippet() {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(4))
+        }
+        val title = EditText(this).apply { hint = "Snippet name" }
+        val body = EditText(this).apply { hint = "Text to insert"; minLines = 2; gravity = Gravity.TOP }
+        layout.addView(title)
+        layout.addView(body)
+        AlertDialog.Builder(this).setTitle("Add snippet").setView(layout)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val name = title.text.toString().trim()
+                val value = body.text.toString()
+                if (name.isNotEmpty() && value.isNotEmpty()) {
+                    val snippets = savedSnippets()
+                    snippets.removeAll { it.substringBefore("\u0000") == name }
+                    snippets.add(name + "\u0000" + value)
+                    prefs.edit().putStringSet("snippets", snippets).apply()
+                    Toast.makeText(this, "Snippet saved", Toast.LENGTH_SHORT).show()
+                }
+            }.show()
+    }
+
+    private fun chooseRecentClipboard() {
+        if (recentClipboard.isEmpty()) {
+            Toast.makeText(this, "No clipboard items captured in this keyboard session", Toast.LENGTH_SHORT).show()
+            return
+        }
+        AlertDialog.Builder(this).setTitle("Recent clipboard (session only)")
+            .setItems(recentClipboard.map { it.replace("\n", " ").take(70) }.toTypedArray()) { _, index ->
+                currentInputConnection?.commitText(recentClipboard[index], 1)
+            }.show()
     }
 
     private fun key(label: String, special: Boolean) = Button(this).apply {
