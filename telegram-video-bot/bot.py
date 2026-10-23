@@ -58,36 +58,24 @@ def ydl_options() -> dict:
 
 
 def list_download_formats(info: dict) -> list[dict]:
-    """Return unique direct video formats, preferring formats with audio."""
-    candidates = []
-    seen = set()
+    """Return direct MP4 formats likely to play in Telegram (H.264 video + AAC audio)."""
+    by_height = {}
     for fmt in info.get("formats") or []:
         direct_url = fmt.get("url")
         if not direct_url or urlparse(direct_url).scheme not in {"http", "https"}:
             continue
-        if fmt.get("vcodec") == "none":
+        # Telegram/mobile players are most compatible with MP4 containing H.264 + AAC.
+        if fmt.get("ext") != "mp4":
+            continue
+        if not str(fmt.get("vcodec") or "").startswith("avc1"):
+            continue
+        if not str(fmt.get("acodec") or "").startswith("mp4a"):
             continue
         height = fmt.get("height") or 0
         if height <= 0:
             continue
-        key = (height, fmt.get("ext"), fmt.get("vcodec"), fmt.get("acodec"))
-        if key not in seen:
-            seen.add(key)
-            candidates.append(fmt)
-
-    by_height = {}
-    for fmt in candidates:
-        height = fmt.get("height") or 0
-        score = (
-            1 if fmt.get("acodec") not in (None, "none") else 0,
-            fmt.get("tbr") or 0,
-        )
         old = by_height.get(height)
-        old_score = (
-            1 if old and old.get("acodec") not in (None, "none") else 0,
-            (old or {}).get("tbr") or 0,
-        )
-        if old is None or score > old_score:
+        if old is None or (fmt.get("tbr") or 0) > (old.get("tbr") or 0):
             by_height[height] = fmt
     return sorted(by_height.values(), key=lambda item: item.get("height") or 0, reverse=True)
 
