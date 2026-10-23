@@ -376,7 +376,7 @@ class SuperKeyboardService : InputMethodService() {
                 (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Transformed text",transformed))
                 Toast.makeText(this,"Copied",Toast.LENGTH_SHORT).show()
             } else ic.commitText(transformed,1)
-        }
+        }.setNegativeButton("Cancel",null).show()
     }
 
     private fun showWritingAssistant(selected: String) {
