@@ -357,21 +357,36 @@ class SuperKeyboardService : InputMethodService() {
             }.show()
             return
         }
-        val options = arrayOf("UPPERCASE","lowercase","Title Case","Reverse text","Remove extra spaces","Copy transformed text","Fix common typos")
+        val options = arrayOf("UPPERCASE","lowercase","Title Case","Reverse text","Remove extra spaces","Copy transformed text","Fix common typos","Writing assistant…")
         AlertDialog.Builder(this).setTitle("Text tools").setItems(options) { _,which ->
+            if (which == 7) {
+                showWritingAssistant(selected)
+                return@setItems
+            }
             val transformed = when(which) {
                 0 -> selected.uppercase()
                 1 -> selected.lowercase()
                 2 -> selected.split(Regex("\\s+")).joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
                 3 -> selected.reversed()
                 4 -> selected.trim().split(Regex("\\s+")).joinToString(" ")
+                5 -> selected
                 else -> selected.split(Regex("\\b")).joinToString("") { OfflinePredictionEngine.correct(it) }
             }
             if (which == 5) {
                 (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Transformed text",transformed))
                 Toast.makeText(this,"Copied",Toast.LENGTH_SHORT).show()
             } else ic.commitText(transformed,1)
-        }.setNegativeButton("Cancel",null).show()
+        }
+    }
+
+    private fun showWritingAssistant(selected: String) {
+        val modes = arrayOf("Fix grammar", "Make concise", "Professional tone", "Friendly tone", "Expand slightly", "Sentence case")
+        AlertDialog.Builder(this).setTitle("Offline writing tools")
+            .setMessage("Runs locally using lightweight rules. This is not a generative AI model.")
+            .setItems(modes) { _, index ->
+                val output = OfflineWritingAssistant.improve(selected, modes[index])
+                currentInputConnection?.commitText(output, 1)
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun savedSnippets(): MutableSet<String> =
@@ -450,7 +465,14 @@ class SuperKeyboardService : InputMethodService() {
     private fun key(label: String, special: Boolean) = Button(this).apply {
         text = label; textSize = if (label.length > 3) 10.5f else 18f; isAllCaps = false
         setTextColor(Color.WHITE); typeface = Typeface.create("sans-serif-medium",Typeface.NORMAL)
-        background = glass(if (special) Color.rgb(74,37,105) else keyColor)
+        background = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(lighten(if (special) Color.rgb(74,37,105) else keyColor), if (special) Color.rgb(74,37,105) else keyColor)
+        ).apply {
+            val radius = prefs.getInt("custom_key_radius", 12).coerceIn(4, 28)
+            cornerRadius = dp(radius).toFloat()
+            setStroke(dp(1),Color.argb(75,Color.red(themeAccent),Color.green(themeAccent),Color.blue(themeAccent)))
+        }
         stateListAnimator = null; minimumWidth = 0; minWidth = 0; minimumHeight = 0; minHeight = 0
         setPadding(0,0,0,0); elevation = if (prefs.getBoolean("animations",true)) dp(2).toFloat() else 0f
     }
