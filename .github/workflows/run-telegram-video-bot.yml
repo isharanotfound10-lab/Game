@@ -20,7 +20,12 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: python -m pip install -r telegram-video-bot/requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r telegram-video-bot/requirements.txt
+          # Try yt-dlp's newest prerelease in case the site extractor was recently fixed.
+          python -m pip install --upgrade --pre yt-dlp
+          python -m yt_dlp --version
 
       - name: Start bot
         env:
