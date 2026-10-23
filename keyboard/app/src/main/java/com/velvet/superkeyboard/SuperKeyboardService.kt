@@ -33,6 +33,7 @@ class SuperKeyboardService : InputMethodService() {
     private var swipeStartX = 0f
     private var swipeStartY = 0f
     private var swipeMoved = false
+    private var lastSpaceAt = 0L
     private val prefs by lazy { getSharedPreferences("keyboard_prefs", Context.MODE_PRIVATE) }
     private val themeName get() = prefs.getString("theme", "Purple")
     private val bg: Int get() = if (themeName == "AMOLED") Color.BLACK else Color.rgb(7, 5, 17)
@@ -198,7 +199,19 @@ class SuperKeyboardService : InputMethodService() {
                 if (composingWord.isNotEmpty()) {
                     val corrected = if (prefs.getBoolean("auto_correct",true) && !sensitiveField) OfflinePredictionEngine.correct(composingWord) else composingWord
                     ic.commitText("$corrected ",1); composingWord = ""
-                } else ic.commitText(" ",1)
+                    lastSpaceAt = 0L
+                } else {
+                    val now = System.currentTimeMillis()
+                    val before = ic.getTextBeforeCursor(1, 0)?.toString().orEmpty()
+                    if (prefs.getBoolean("double_space_period", true) && before == " " && now - lastSpaceAt < 500L) {
+                        ic.deleteSurroundingText(1, 0)
+                        ic.commitText(". ", 1)
+                        lastSpaceAt = 0L
+                    } else {
+                        ic.commitText(" ",1)
+                        lastSpaceAt = now
+                    }
+                }
                 refreshSuggestions()
             }
             "↵" -> {
@@ -213,7 +226,10 @@ class SuperKeyboardService : InputMethodService() {
             "ABC" -> { symbols = false; unicode = false; refreshKeyboard() }
             else -> {
                 if (!symbols && !unicode && key.length == 1 && key[0].isLetter() && !sensitiveField) {
-                    composingWord += if (shifted) key.uppercase() else key.lowercase()
+                    val before = ic.getTextBeforeCursor(3, 0)?.toString().orEmpty()
+                    val sentenceStart = before.isEmpty() || before.endsWith(". ") || before.endsWith("? ") || before.endsWith("! ") || before.endsWith("\n")
+                    val uppercase = shifted || (prefs.getBoolean("auto_capitalize", true) && composingWord.isEmpty() && sentenceStart)
+                    composingWord += if (uppercase) key.uppercase() else key.lowercase()
                     ic.setComposingText(composingWord,1); refreshSuggestions()
                 } else {
                     if (composingWord.isNotEmpty()) { ic.commitText(composingWord,1); composingWord = "" }
