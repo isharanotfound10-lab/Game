@@ -1,0 +1,52 @@
+name: Super Keyboard Android
+
+on:
+  push:
+    branches: [ "feature/super-keyboard-android" ]
+    paths:
+      - "keyboard/**"
+      - ".github/workflows/super-keyboard-android.yml"
+  pull_request:
+    paths:
+      - "keyboard/**"
+      - ".github/workflows/super-keyboard-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: super-keyboard-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Validate project files
+        run: |
+          test -f keyboard/settings.gradle.kts
+          test -f keyboard/app/src/main/AndroidManifest.xml
+          test -f keyboard/app/src/main/java/com/velvet/superkeyboard/SuperKeyboardService.kt
+      - name: Build debug APK
+        run: gradle -p keyboard assembleDebug --no-daemon
+      - name: Run Android unit tests
+        run: gradle -p keyboard testDebugUnitTest --no-daemon
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Super-Keyboard-debug-APK
+          path: keyboard/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
