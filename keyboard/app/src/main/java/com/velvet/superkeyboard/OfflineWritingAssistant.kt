@@ -46,7 +46,7 @@ object OfflineWritingAssistant {
         val replacements = listOf(
             Regex("\\bcan't\\b", RegexOption.IGNORE_CASE) to "cannot",
             Regex("\\bdon't\\b", RegexOption.IGNORE_CASE) to "do not",
-            Regex("\\ guys\\b", RegexOption.IGNORE_CASE) to " everyone",
+            Regex("\\bguys\\b", RegexOption.IGNORE_CASE) to " everyone",
             Regex("\\bhey\\b", RegexOption.IGNORE_CASE) to "Hello"
         )
         replacements.forEach { (pattern, replacement) -> result = pattern.replace(result, replacement) }
