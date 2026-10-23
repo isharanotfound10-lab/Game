@@ -39,6 +39,8 @@ class SettingsActivity : Activity() {
         root.addView(actionButton("⌨  Layout: ${prefs.getString("layout","QWERTY")}") { chooseLayout() },LinearLayout.LayoutParams(-1,50))
         root.addView(actionButton("↕  Key size: ${prefs.getString("key_size","Normal")}") { chooseKeySize() },LinearLayout.LayoutParams(-1,50))
         root.addView(actionButton("🧩  Keyboard appearance / key shape") { chooseKeyAppearance() },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("🌐  Typing language: ${prefs.getString("dictionary_language","English")}") { chooseDictionaryLanguage() },LinearLayout.LayoutParams(-1,50))
+        root.addView(actionButton("🛠  Custom keyboard rows") { editCustomLayout() },LinearLayout.LayoutParams(-1,50))
         addSwitch(root,"Smooth animations / effects","animations",true)
         addSwitch(root,"Show number row","number_row",true)
         addSwitch(root,"Auto-correct common typos","auto_correct",true)
@@ -110,6 +112,51 @@ class SettingsActivity : Activity() {
                 Toast.makeText(this, "Key shape saved. Reopen the keyboard to apply.", Toast.LENGTH_SHORT).show()
                 render()
             }.setNegativeButton("Cancel", null).show()
+    }
+
+    private fun chooseDictionaryLanguage() {
+        val languages = arrayOf("English", "Sinhala", "Tamil")
+        val selected = languages.indexOf(prefs.getString("dictionary_language", "English")).coerceAtLeast(0)
+        AlertDialog.Builder(this).setTitle("Typing language and offline dictionary")
+            .setMessage("Includes small built-in word lists for suggestions. This is not a full spell-check dictionary.")
+            .setSingleChoiceItems(languages, selected) { dialog, which ->
+                prefs.edit().putString("dictionary_language", languages[which]).remove("custom_layout_rows").apply()
+                dialog.dismiss()
+                render()
+                Toast.makeText(this, "Language saved. Reopen the keyboard to apply.", Toast.LENGTH_SHORT).show()
+            }.setNegativeButton("Cancel", null).show()
+    }
+
+    private fun editCustomLayout() {
+        val defaultRows = when (prefs.getString("dictionary_language", "English")) {
+            "Sinhala" -> "අආඇඉඊඋඑඔකග\nචජටඩතදනපබ\nමයരලවසහළෆ"
+            "Tamil" -> "அஆஇஈஉஊஎஏகங\nசஞடணதநபமய\nரலவழளறனஜஹ"
+            else -> "qwertyuiop\nasdfghjkl\nzxcvbnm"
+        }
+        val input = EditText(this).apply {
+            hint = "One key per character; three rows"
+            setText(prefs.getString("custom_layout_rows", defaultRows))
+            minLines = 3
+            gravity = Gravity.TOP
+            isSingleLine = false
+        }
+        AlertDialog.Builder(this).setTitle("Custom keyboard rows")
+            .setMessage("Edit three lines. Each character becomes one key. Use letters only; special keys remain on the bottom row. Leave blank to restore the selected language's default layout.")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setNeutralButton("Reset") { _, _ ->
+                prefs.edit().remove("custom_layout_rows").apply()
+                Toast.makeText(this, "Default layout restored", Toast.LENGTH_SHORT).show()
+            }
+            .setPositiveButton("Save") { _, _ ->
+                val rows = input.text.toString().trim().lines()
+                if (rows.size == 3 && rows.all { it.isNotBlank() && it.codePointCount(0, it.length) in 5..12 }) {
+                    prefs.edit().putString("custom_layout_rows", rows.joinToString("\n")).apply()
+                    Toast.makeText(this, "Custom layout saved. Reopen the keyboard.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Enter exactly three non-empty rows, each with 5–12 characters.", Toast.LENGTH_LONG).show()
+                }
+            }.show()
     }
 
     private fun editSignature() {
